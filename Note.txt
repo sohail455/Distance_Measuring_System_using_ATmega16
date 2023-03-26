@@ -1,0 +1,2 @@
+there is a difference between the ultrasonic sensor reading in proteus and our calculations, but when i calculate the distance by the 
+formula (34000*time/2) from the oscillscope i found out that our calculation was right not the ultarsonic sensor.

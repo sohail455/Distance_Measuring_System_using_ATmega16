@@ -1,0 +1,109 @@
+/******************************************************************************
+ *
+ * Module: ULTRA_SONIC
+ *
+ * File Name: ultra_sonic.c
+ *
+ * Description: source file for the AVR ULTRA_SONIC driver
+ *
+ * Author: Sohail Talaat
+ *
+ *******************************************************************************/
+#include"icu.h"/*to use icu functions*/
+#include"ultra_sonic.h"
+#include "gpio.h"/*to use gpio function*/
+#include<util/delay.h>/*to make a delay*/
+/*******************************************************************************
+ *                           Global Variables                                  *
+ *******************************************************************************/
+
+volatile static uint16 g_pulse_width = 0;/*the time betwee the rising and falling edges*/
+volatile static uint8 g_counter = 0;/*global counter*/
+
+/*******************************************************************************
+ *                      Functions Definitions                                  *
+ *******************************************************************************/
+
+/*
+ * Description :
+ * this function has two parts first part responsible to detect the time
+ * of rising edge detection and clear the timer register and wait for the falling
+ * edge in the second part of this function. once the falling edge came the time
+ * will be stored in a variable and the timer register will be cleared and wait for
+ * the next rising edge to calculate again. this function will passed as callback
+ * to Icu_setCallBack to be executed every time an interrupt happens
+ */
+void Ultrasonic_edgeProcessing(void)
+{
+	g_counter++;
+	if(g_counter == 1)
+	{
+		Icu_clearTimerValue();/*clear the timer to start calculate the time at this point*/
+		Icu_setEdgeDetectionType(FALLING);/*waiting for the next falling edge*/
+	}
+	else if(g_counter == 2)
+	{
+		g_pulse_width = Icu_getInputCaptureValue();/*store the pulse time*/
+		Icu_clearTimerValue();/*clear the timer register to start again*/
+		Icu_setEdgeDetectionType(RISING);/*waiting for the next rising*/
+	}
+
+}
+
+/*
+ * Description :
+ * 1.initiate icu
+ * 2.set callback function to be execute every time icu caputer rising or falling edge
+ * 3.set the trigger pin direction
+ */
+void Ultrasonic_init()
+{
+	Icu_ConfigType config = {F_CPU_8,RISING};/*make our configuration*/
+	Icu_init(&config);/*initiate icu*/
+
+
+	Icu_setCallBack(Ultrasonic_edgeProcessing);/*set the callback*/
+
+	GPIO_setupPinDirection(TRIGGER_PORT, TRIGGER_PIN, PIN_OUTPUT);/*set the direction of the trigger*/
+
+	GPIO_writePin(TRIGGER_PORT, TRIGGER_PIN, LOGIC_LOW);/*initail value*/
+
+}
+
+/*
+ * Description :
+ * make a pulse for 10us to trigger the ultrasonic sensor
+ */
+void Ultrasonic_Trigger(void)
+{
+	GPIO_writePin(TRIGGER_PORT, TRIGGER_PIN, LOGIC_HIGH);
+	_delay_us(10);
+	GPIO_writePin(TRIGGER_PORT, TRIGGER_PIN, LOGIC_LOW);
+
+}
+
+/*
+ * Description :
+ * make a trigger and start reading the time between the rising and falling edge
+ * of ultrasonic sensor echo pulse using icu
+ */
+uint16 Ultrasonic_readDistance(void)
+{
+	uint16 distance = 0;/*a variable to calculate the distance in cm*/
+	Ultrasonic_Trigger();/*send a triger*/
+	while(1)
+	{
+
+		if(g_counter == 2)/*wait until the calculation done*/
+		{
+			g_counter = 0;/*clear the counter to calculate again*/
+			distance = ((float)g_pulse_width / (58.8)) ;/*distance calculation*/
+
+			return distance;
+		}
+
+
+	}
+
+}
+

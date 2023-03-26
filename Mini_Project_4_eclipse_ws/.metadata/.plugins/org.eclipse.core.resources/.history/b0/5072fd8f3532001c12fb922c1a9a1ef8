@@ -1,0 +1,82 @@
+/******************************************************************************
+ *
+ * Module: ULTRA_SONIC
+ *
+ * File Name: ultra_sonic.c
+ *
+ * Description: source file for the AVR ULTRA_SONIC driver
+ *
+ * Author: Sohail Talaat
+ *
+ *******************************************************************************/
+#include <avr/io.h>
+#include"icu.h"
+#include"ultra_sonic.h"
+#include "gpio.h"
+#include<util/delay.h>
+
+volatile static uint16 g_pulse_width = 0;/*the time betwee the rising and falling edges*/
+volatile static uint8 g_counter = 0;/*global counter*/
+
+void Ultrasonic_edgeProcessing(void)
+{
+	g_counter++;
+	if(g_counter == 1)
+	{
+		Icu_clearTimerValue();/*clear the timer to start calculate the time at this point*/
+		Icu_setEdgeDetectionType(FALLING);/*waiting for the next falling edge*/
+	}
+	else if(g_counter == 2)
+	{
+		g_pulse_width = Icu_getInputCaptureValue();/*store the pulse time*/
+		Icu_clearTimerValue();/*clear the timer register to start again*/
+		Icu_setEdgeDetectionType(RISING);/*waiting for the next rising*/
+	}
+
+
+
+}
+
+void Ultrasonic_init()
+{
+	Icu_ConfigType config = {F_CPU_8,RISING};/*make our configuration*/
+	Icu_init(&config);/*initiate icu*/
+
+
+	Icu_setCallBack(Ultrasonic_edgeProcessing);/*set the callback*/
+
+	GPIO_setupPinDirection(TRIGGER_PORT, TRIGGER_PIN, PIN_OUTPUT);/*set the direction of the trigger*/
+
+	GPIO_writePin(TRIGGER_PORT, TRIGGER_PIN, LOGIC_LOW);/*initail value*/
+
+
+
+}
+
+void Ultrasonic_Trigger(void)
+{
+	GPIO_writePin(TRIGGER_PORT, TRIGGER_PIN, LOGIC_HIGH);
+	_delay_us(10);
+	GPIO_writePin(TRIGGER_PORT, TRIGGER_PIN, LOGIC_LOW);
+
+}
+
+uint16 Ultrasonic_readDistance(void)
+{
+	uint16 distance = 0;/*a variable to calculate the distance in cm*/
+	Ultrasonic_Trigger();/*send a triger*/
+	while(1)
+	{
+
+		if(g_counter == 2)
+		{
+			g_counter = 0;
+			distance = ((float)g_pulse_width / (58.82)) ;
+			return distance;
+		}
+
+
+	}
+
+}
+

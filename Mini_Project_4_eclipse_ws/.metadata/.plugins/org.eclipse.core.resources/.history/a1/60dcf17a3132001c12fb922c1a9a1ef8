@@ -1,0 +1,38 @@
+ /******************************************************************************
+ *
+ * Module: GPIO
+ *
+ * File Name: gpio.h
+ *
+ * Description: Header file for the AVR GPIO driver
+ *
+ * Author: Sohail Talaat
+ *
+ *******************************************************************************/
+
+
+#ifndef ULTRA_SONIC_H_
+#define ULTRA_SONIC_H_
+#include "std_types.h"
+
+
+#define TRIGGER_PORT   PORTB_ID
+#define TRIGGER_PIN    PIN6_ID
+
+/*
+ * Description :
+ * 1.initiate icu
+ * 2.set callback function to be execute every time icu caputer rising or falling edge
+ * 3.set the trigger pin direction
+ */
+void Ultrasonic_init(void);
+
+void Ultrasonic_Trigger(void);
+
+uint16 Ultrasonic_readDistance(void);
+
+void Ultrasonic_edgeProcessing(void);
+
+
+
+#endif /* ULTRA_SONIC_H_ */
